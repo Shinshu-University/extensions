@@ -1,6 +1,6 @@
-// Name: Iframe
-// ID: iframe
-// Description: Display webpages or HTML over the stage.
+// Name: Iframe-Plus
+// ID: iframeplus
+// Description: Display webpages or HTML over the stage
 // Context: "iframe" is an HTML element that lets websites embed other websites.
 // License: MIT AND MPL-2.0
 
@@ -69,7 +69,7 @@ Scratch.translate.setup({
     "allow-forms",
     "allow-modals",
     "allow-popups",
-	"allow-top-navigation",
+    "allow-top-navigation",
   ];
 
   let x = 0;
@@ -166,12 +166,12 @@ Scratch.translate.setup({
     }
     getInfo() {
       return {
-        name: Scratch.translate("Iframe"),
-        id: "iframe",
+        name: "Iframe+",
+        id: "iframeplus",
         blocks: [{
             opcode: "display",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("show website [URL]"),
+            text: "埋め込み(URLから) [URL]",
             arguments: {
               URL: {
                 type: Scratch.ArgumentType.STRING,
@@ -181,31 +181,31 @@ Scratch.translate.setup({
           }, {
             opcode: "displayHTML",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("show HTML [HTML]"),
+            text: "埋め込み(HTMLから) [HTML]",
             arguments: {
               HTML: {
                 type: Scratch.ArgumentType.STRING,
-                defaultValue: `<h1>${Scratch.translate("It works!")}</h1>`,
+                defaultValue: "<h1>Hello world</h1>",
               },
             },
           },
           "---", {
             opcode: "show",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("show iframe"),
+            text: "埋め込みを表示する",
           }, {
             opcode: "hide",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("hide iframe"),
+            text: "埋め込みを隠す",
           }, {
             opcode: "close",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("close iframe"),
+            text: "埋め込みを閉じる",
           },
           "---", {
             opcode: "get",
             blockType: Scratch.BlockType.REPORTER,
-            text: Scratch.translate("iframe [MENU]"),
+            text: "埋め込みの[MENU]",
             arguments: {
               MENU: {
                 type: Scratch.ArgumentType.STRING,
@@ -215,7 +215,7 @@ Scratch.translate.setup({
           }, {
             opcode: "setX",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("set iframe x position to [X]"),
+            text: "埋め込みのx座標を[X]にする",
             arguments: {
               X: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -225,7 +225,7 @@ Scratch.translate.setup({
           }, {
             opcode: "setY",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("set iframe y position to [Y]"),
+            text: "埋め込みのy座標を[Y]にする",
             arguments: {
               Y: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -235,7 +235,7 @@ Scratch.translate.setup({
           }, {
             opcode: "setWidth",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("set iframe width to [WIDTH]"),
+            text: "埋め込みの幅を[WIDTH]にする",
             arguments: {
               WIDTH: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -245,7 +245,7 @@ Scratch.translate.setup({
           }, {
             opcode: "setHeight",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate("set iframe height to [HEIGHT]"),
+            text: "埋め込みの高さを[HEIGHT]にする",
             arguments: {
               HEIGHT: {
                 type: Scratch.ArgumentType.NUMBER,
@@ -274,10 +274,16 @@ Scratch.translate.setup({
                 menu: "resizeMenu",
               },
             },
-          }, {
+          }, 
+          "---", {
             opcode: "getValue",
             blockType: Scratch.BlockType.REPORTER,
-            text: Scratch.translate("埋め込みからのデータ"),
+            text: "埋め込みからのデータ",
+          },
+          {
+            opcode: "resetValue",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "埋め込みからのデータをリセットする",
           },
         ],
         menus: {
@@ -318,15 +324,18 @@ Scratch.translate.setup({
     getValue() {
       return this.receivedValue;
     }
-
+    
+    resetValue() {
+      this.receivedValue = "";
+    }
 
     async display({
       URL
     }) {
       closeFrame();
-      // if (await Scratch.canEmbed(URL)) {
+      if (await Scratch.canEmbed(URL)) {
         createFrame(Scratch.Cast.toString(URL));
-      // }
+      }
     }
 
     async displayHTML({
@@ -363,7 +372,7 @@ Scratch.translate.setup({
     }) {
       MENU = Scratch.Cast.toString(MENU);
       if (MENU === "url") {
-        if (iframe) return iframe.getAttribute("src");
+        if (iframe) return iframe.GetAttribute("src");
         return "";
       } else if (MENU === "visible") {
         return !!iframe && iframe.style.display !== "none";
