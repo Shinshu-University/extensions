@@ -57,6 +57,7 @@
     if (!x[iframeID]) x[iframeID] = 0;
     if (!y[iframeID]) y[iframeID] = 0;
     if (!resizeBehavior[iframeID]) resizeBehavior[iframeID] = "scale";
+    if (!interactive[iframeID]) interactive[iframeID] = "true";
   };
 
   const updateFrameAttributes = (iframeID) => {
