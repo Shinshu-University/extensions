@@ -7,9 +7,10 @@
 (function(Scratch) {
   "use strict";
 
-  /** @type {HTMLIFrameElement|null} */
-  let iframe = null;
-  let overlay = null;
+  /** @type {Object.<string, HTMLIFrameElement>} */
+  let iframes = {};
+  /** @type {Object.<string, Overlay>} */
+  let overlays = {};
 
   const featurePolicy = {
     accelerometer: "'none'",
@@ -46,33 +47,34 @@
     "allow-top-navigation",
   ];
 
-  let x = 0;
-  let y = 0;
-  let width = -1; // negative means default
-  let height = -1; // negative means default
-  let interactive = true;
-  let resizeBehavior = "scale";
+  let x = {};
+  let y = {};
+  let width = {};
+  let height = {};
+  let interactive = {};
+  let resizeBehavior = {};
 
-  const updateFrameAttributes = () => {
+  const updateFrameAttributes = (iframeID) => {
+    const iframe = iframes[iframeID];
     if (!iframe) {
       return;
     }
 
-    iframe.style.pointerEvents = interactive ? "auto" : "none";
+    iframe.style.pointerEvents = interactive[iframeID] ? "auto" : "none";
 
     const {
       stageWidth, stageHeight
     } = Scratch.vm.runtime;
-    const effectiveWidth = width >= 0 ? width : stageWidth;
-    const effectiveHeight = height >= 0 ? height : stageHeight;
+    const effectiveWidth = width[iframeID] >= 0 ? width[iframeID] : stageWidth;
+    const effectiveHeight = height[iframeID] >= 0 ? height[iframeID] : stageHeight;
 
-    if (resizeBehavior === "scale") {
+    if (resizeBehavior[iframeID] === "scale") {
       iframe.style.width = `${effectiveWidth}px`;
       iframe.style.height = `${effectiveHeight}px`;
 
       iframe.style.transform =
-        `translate(${-effectiveWidth / 2 + x}px, ${
-        -effectiveHeight / 2 - y
+        `translate(${-effectiveWidth / 2 + x[iframeID]}px, ${
+        -effectiveHeight / 2 - y[iframeID]
       }px)`;
       iframe.style.top = "0";
       iframe.style.left = "0";
@@ -84,20 +86,20 @@
       iframe.style.transform = "";
       iframe.style.top =
         `${
-        (0.5 - effectiveHeight / 2 / stageHeight - y / stageHeight) * 100
+        (0.5 - effectiveHeight / 2 / stageHeight - y[iframeID] / stageHeight) * 100
       }%`;
       iframe.style.left =
         `${
-        (0.5 - effectiveWidth / 2 / stageWidth + x / stageWidth) * 100
+        (0.5 - effectiveWidth / 2 / stageWidth + x[iframeID] / stageWidth) * 100
       }%`;
     }
   };
 
-  const getOverlayMode = () =>
-    resizeBehavior === "scale" ? "scale-centered" : "manual";
+  const getOverlayMode = (iframeID) =>
+    resizeBehavior[iframeID] === "scale" ? "scale-centered" : "manual";
 
-  const createFrame = (src) => {
-    iframe = document.createElement("iframe");
+  const createFrame = (iframeID, src) => {
+    const iframe = document.createElement("iframe");
     iframe.style.width = "100%";
     iframe.style.height = "100%";
     iframe.style.border = "none";
@@ -113,28 +115,37 @@
     iframe.setAttribute("allowtransparency", "true");
     iframe.setAttribute("src", src);
 
-    overlay = Scratch.renderer.addOverlay(iframe, getOverlayMode());
-    updateFrameAttributes();
+    iframes[iframeID] = iframe;
+    overlays[iframeID] = Scratch.renderer.addOverlay(iframe, getOverlayMode(iframeID));
+    updateFrameAttributes(iframeID);
   };
 
-  const closeFrame = () => {
-    if (iframe) {
-      Scratch.renderer.removeOverlay(iframe);
-      iframe = null;
-      overlay = null;
+  const closeFrame = (iframeID) => {
+    if (iframes[iframeID]) {
+      Scratch.renderer.removeOverlay(iframes[iframeID]);
+      delete iframes[iframeID];
+      delete overlays[iframeID];
     }
   };
 
-  Scratch.vm.on("STAGE_SIZE_CHANGED", updateFrameAttributes);
+  Scratch.vm.on("STAGE_SIZE_CHANGED", () => {
+    for (const iframeID in iframes) {
+      updateFrameAttributes(iframeID);
+    }
+  });
 
-  Scratch.vm.runtime.on("RUNTIME_DISPOSED", closeFrame);
+  Scratch.vm.runtime.on("RUNTIME_DISPOSED", () => {
+    for (const iframeID in iframes) {
+      closeFrame(iframeID);
+    }
+  });
 
   class IframeExtension {
     constructor() {
-      this.receivedValue = "";
+      this.receivedValues = {};
       window.addEventListener("message", (event) => {
         if (event.data && event.data.type === "updateValue") {
-          this.receivedValue = event.data.value;
+          this.receivedValues[event.data.iframeID] = event.data.value;
         }
       });
     }
@@ -145,8 +156,12 @@
         blocks: [{
             opcode: "display",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込み(URLから) [URL]",
+            text: "埋め込み [IFRAMEID] を表示 (URLから) [URL]",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               URL: {
                 type: Scratch.ArgumentType.STRING,
                 defaultValue: "https://extensions.turbowarp.org/hello.html",
@@ -155,8 +170,12 @@
           }, {
             opcode: "displayHTML",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込み(HTMLから) [HTML]",
+            text: "埋め込み [IFRAMEID] を表示 (HTMLから) [HTML]",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               HTML: {
                 type: Scratch.ArgumentType.STRING,
                 defaultValue: "<h1>Hello world</h1>",
@@ -166,21 +185,43 @@
           "---", {
             opcode: "show",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みを表示する",
+            text: "埋め込み [IFRAMEID] を表示する",
+            arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
+            },
           }, {
             opcode: "hide",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みを隠す",
+            text: "埋め込み [IFRAMEID] を隠す",
+            arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
+            },
           }, {
             opcode: "close",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みを閉じる",
+            text: "埋め込み [IFRAMEID] を閉じる",
+            arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
+            },
           },
           "---", {
             opcode: "get",
             blockType: Scratch.BlockType.REPORTER,
-            text: "埋め込みの[MENU]",
+            text: "埋め込み [IFRAMEID] の [MENU]",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               MENU: {
                 type: Scratch.ArgumentType.STRING,
                 menu: "getMenu",
@@ -189,8 +230,12 @@
           }, {
             opcode: "setX",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みのx座標を[X]にする",
+            text: "埋め込み [IFRAMEID] のx座標を[X]にする",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               X: {
                 type: Scratch.ArgumentType.NUMBER,
                 defaultValue: "0",
@@ -199,8 +244,12 @@
           }, {
             opcode: "setY",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みのy座標を[Y]にする",
+            text: "埋め込み [IFRAMEID] のy座標を[Y]にする",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               Y: {
                 type: Scratch.ArgumentType.NUMBER,
                 defaultValue: "0",
@@ -209,8 +258,12 @@
           }, {
             opcode: "setWidth",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みの幅を[WIDTH]にする",
+            text: "埋め込み [IFRAMEID] の幅を[WIDTH]にする",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               WIDTH: {
                 type: Scratch.ArgumentType.NUMBER,
                 defaultValue: Scratch.vm.runtime.stageWidth,
@@ -219,8 +272,12 @@
           }, {
             opcode: "setHeight",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みの高さを[HEIGHT]にする",
+            text: "埋め込み [IFRAMEID] の高さを[HEIGHT]にする",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               HEIGHT: {
                 type: Scratch.ArgumentType.NUMBER,
                 defaultValue: Scratch.vm.runtime.stageHeight,
@@ -229,8 +286,12 @@
           }, {
             opcode: "setInteractive",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みの動作を[INTERACTIVE]にする",
+            text: "埋め込み [IFRAMEID] の動作を[INTERACTIVE]にする",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               INTERACTIVE: {
                 type: Scratch.ArgumentType.STRING,
                 menu: "interactiveMenu",
@@ -239,8 +300,12 @@
           }, {
             opcode: "setResize",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みのサイズ変更動作を[RESIZE]にする",
+            text: "埋め込み [IFRAMEID] のサイズ変更動作を[RESIZE]にする",
             arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
               RESIZE: {
                 type: Scratch.ArgumentType.STRING,
                 menu: "resizeMenu",
@@ -250,22 +315,59 @@
           "---", {
             opcode: "getValue",
             blockType: Scratch.BlockType.REPORTER,
-            text: "埋め込みからのデータ",
+            text: "埋め込み [IFRAMEID] からのデータ",
+            arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
+            },
           }, {
             opcode: "resetValue",
             blockType: Scratch.BlockType.COMMAND,
-            text: "埋め込みからのデータをリセットする",
+            text: "埋め込み [IFRAMEID] からのデータをリセットする",
+            arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
+            },
           }, {
-			opcode: "sendMessageToIframe",
-			blockType: Scratch.BlockType.COMMAND,
-			text: "埋め込みへのデータ [MESSAGE]",
-			arguments: {
-		      MESSAGE: {
-			    type: Scratch.ArgumentType.STRING,
-				defaultValue: "Hello, iframe!",
-			  },
-			},
-		  },
+            opcode: "sendMessageToIframe",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "埋め込み [IFRAMEID] へのデータ [MESSAGE]",
+            arguments: {
+              IFRAMEID: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "iframe1",
+              },
+              MESSAGE: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "Hello, iframe!",
+              },
+            },
+          },
+          "---", {
+            opcode: "getAllIframeIDs",
+            blockType: Scratch.BlockType.REPORTER,
+            text: "すべての埋め込みID",
+          }, {
+            opcode: "showAllIframes",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "すべての埋め込みを表示する",
+          }, {
+            opcode: "hideAllIframes",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "すべての埋め込みを隠す",
+          }, {
+            opcode: "closeAllIframes",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "すべての埋め込みを閉じる",
+          }, {
+            opcode: "resetAllValues",
+            blockType: Scratch.BlockType.COMMAND,
+            text: "すべての埋め込みからのデータをリセットする",
+          },
         ],
         menus: {
           getMenu: {
@@ -284,7 +386,6 @@
           interactiveMenu: {
             acceptReporters: true,
             items: [
-              // The getter blocks will return English regardless of translating these
               "true",
               "false",
             ],
@@ -302,131 +403,176 @@
         },
       };
     }
-	
-	sendMessageToIframe({ MESSAGE }) {
-	  if (iframe && iframe.contentWindow) {
-	    iframe.contentWindow.postMessage({ type: "fromTurboWarp", message: MESSAGE }, "*");
-	  }
-	}
-	  
-    getValue() {
-      return this.receivedValue;
+
+    sendMessageToIframe({
+      IFRAMEID,
+      MESSAGE
+    }) {
+      const iframe = iframes[IFRAMEID];
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: "fromTurboWarp",
+          message: MESSAGE
+        }, "*");
+      }
     }
 
-    resetValue() {
-      this.receivedValue = "";
+    getValue({
+      IFRAMEID
+    }) {
+      return this.receivedValues[IFRAMEID] || "";
+    }
+
+    resetValue({
+      IFRAMEID
+    }) {
+      this.receivedValues[IFRAMEID] = "";
     }
 
     async display({
+      IFRAMEID,
       URL
     }) {
-      closeFrame();
+      closeFrame(IFRAMEID);
       if (await Scratch.canEmbed(URL)) {
-        createFrame(Scratch.Cast.toString(URL));
+        createFrame(IFRAMEID, Scratch.Cast.toString(URL));
       }
     }
 
     async displayHTML({
+      IFRAMEID,
       HTML
     }) {
-      closeFrame();
+      closeFrame(IFRAMEID);
       const url =
         `data:text/html;,${encodeURIComponent(
         Scratch.Cast.toString(HTML)
       )}`;
       if (await Scratch.canEmbed(url)) {
-        createFrame(url);
+        createFrame(IFRAMEID, url);
       }
     }
 
-    show() {
+    show({
+      IFRAMEID
+    }) {
+      const iframe = iframes[IFRAMEID];
       if (iframe) {
         iframe.style.display = "";
       }
     }
 
-    hide() {
+    hide({
+      IFRAMEID
+    }) {
+      const iframe = iframes[IFRAMEID];
       if (iframe) {
         iframe.style.display = "none";
       }
     }
 
-    close() {
-      closeFrame();
+    close({
+      IFRAMEID
+    }) {
+      closeFrame(IFRAMEID);
     }
 
     get({
+      IFRAMEID,
       MENU
     }) {
       MENU = Scratch.Cast.toString(MENU);
+      const iframe = iframes[IFRAMEID];
       if (MENU === "url") {
-        if (iframe) return iframe.GetAttribute("src");
+        if (iframe) return iframe.src;
         return "";
       } else if (MENU === "visible") {
         return !!iframe && iframe.style.display !== "none";
       } else if (MENU === "x") {
-        return x;
+        return x[IFRAMEID] || 0;
       } else if (MENU === "y") {
-        return y;
+        return y[IFRAMEID] || 0;
       } else if (MENU === "width") {
-        return width >= 0 ? width : Scratch.vm.runtime.stageWidth;
+        return width[IFRAMEID] >= 0 ? width[IFRAMEID] : Scratch.vm.runtime.stageWidth;
       } else if (MENU === "height") {
-        return height >= 0 ? height : Scratch.vm.runtime.stageHeight;
+        return height[IFRAMEID] >= 0 ? height[IFRAMEID] : Scratch.vm.runtime.stageHeight;
       } else if (MENU === "interactive") {
-        return interactive;
+        return interactive[IFRAMEID] || true;
       } else if (MENU === "resize behavior") {
-        return resizeBehavior;
+        return resizeBehavior[IFRAMEID] || "scale";
       } else {
         return "";
       }
     }
 
     setX({
+      IFRAMEID,
       X
     }) {
-      x = Scratch.Cast.toNumber(X);
-      updateFrameAttributes();
-    }
-
-    setY({
-      Y
-    }) {
-      y = Scratch.Cast.toNumber(Y);
-      updateFrameAttributes();
-    }
-
-    setWidth({
-      WIDTH
-    }) {
-      width = Scratch.Cast.toNumber(WIDTH);
-      updateFrameAttributes();
+      x[IFRAMEID] = Scratch.Cast.toNumber(X);
+      updateFrameAttributes(IFRAMEID);
     }
 
     setHeight({
+      IFRAMEID,
       HEIGHT
     }) {
-      height = Scratch.Cast.toNumber(HEIGHT);
-      updateFrameAttributes();
+      height[IFRAMEID] = Scratch.Cast.toNumber(HEIGHT);
+      updateFrameAttributes(IFRAMEID);
     }
 
     setInteractive({
+      IFRAMEID,
       INTERACTIVE
     }) {
-      interactive = Scratch.Cast.toBoolean(INTERACTIVE);
-      updateFrameAttributes();
+      interactive[IFRAMEID] = Scratch.Cast.toBoolean(INTERACTIVE);
+      updateFrameAttributes(IFRAMEID);
     }
 
     setResize({
+      IFRAMEID,
       RESIZE
     }) {
       if (RESIZE === "scale" || RESIZE === "viewport") {
-        resizeBehavior = RESIZE;
-        if (overlay) {
-          overlay.mode = getOverlayMode();
+        resizeBehavior[IFRAMEID] = RESIZE;
+        if (overlays[IFRAMEID]) {
+          overlays[IFRAMEID].mode = getOverlayMode(IFRAMEID);
           Scratch.renderer._updateOverlays();
-          updateFrameAttributes();
+          updateFrameAttributes(IFRAMEID);
         }
       }
+    }
+
+    getAllIframeIDs() {
+      return Object.keys(iframes);
+    }
+
+    showAllIframes() {
+      for (const iframeID in iframes) {
+        this.show({
+          IFRAMEID: iframeID
+        });
+      }
+    }
+
+    hideAllIframes() {
+      for (const iframeID in iframes) {
+        this.hide({
+          IFRAMEID: iframeID
+        });
+      }
+    }
+
+    closeAllIframes() {
+      for (const iframeID in iframes) {
+        this.close({
+          IFRAMEID: iframeID
+        });
+      }
+    }
+
+    resetAllValues() {
+      this.receivedValues = {};
     }
   }
 
