@@ -53,6 +53,11 @@
   let height = {};
   let interactive = {};
   let resizeBehavior = {};
+  const defaultIframeSettings = (iframeID) => {
+    if (!x[iframeID]) x[iframeID] = 0;
+    if (!y[iframeID]) y[iframeID] = 0;
+    if (!resizeBehavior[iframeID]) resizeBehavior[iframeID] = "scale";
+  };
 
   const updateFrameAttributes = (iframeID) => {
     const iframe = iframes[iframeID];
@@ -118,6 +123,7 @@
 
     iframes[iframeID] = iframe;
     overlays[iframeID] = Scratch.renderer.addOverlay(iframe, getOverlayMode(iframeID));
+    defaultIframeSettings(iframeID);
     updateFrameAttributes(iframeID);
   };
 
@@ -511,6 +517,22 @@
       X
     }) {
       x[IFRAMEID] = Scratch.Cast.toNumber(X);
+      updateFrameAttributes(IFRAMEID);
+    }
+    
+    setY({
+      IFRAMEID,
+      Y
+    }) {
+      y[IFRAMEID] = Scratch.Cast.toNumber(Y);
+      updateFrameAttributes(IFRAMEID);
+    }
+
+    setWidth({
+      IFRAMEID,
+      WIDTH
+    }) {
+      width[IFRAMEID] = Scratch.Cast.toNumber(WIDTH);
       updateFrameAttributes(IFRAMEID);
     }
 
