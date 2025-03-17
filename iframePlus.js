@@ -274,17 +274,26 @@ Scratch.translate.setup({
                 menu: "resizeMenu",
               },
             },
-          }, 
+          },
           "---", {
             opcode: "getValue",
             blockType: Scratch.BlockType.REPORTER,
             text: "埋め込みからのデータ",
-          },
-          {
+          }, {
             opcode: "resetValue",
             blockType: Scratch.BlockType.COMMAND,
             text: "埋め込みからのデータをリセットする",
-          },
+          }, {
+			opcode: "sendMessageToIframe",
+			blockType: Scratch.BlockType.COMMAND,
+			text: "埋め込みへのデータ [MESSAGE]",
+			arguments: {
+		      MESSAGE: {
+			    type: Scratch.ArgumentType.STRING,
+				defaultValue: "Hello, iframe!",
+			  },
+			},
+		  },
         ],
         menus: {
           getMenu: {
@@ -321,10 +330,17 @@ Scratch.translate.setup({
         },
       };
     }
+	
+	sendMessageToIframe({ MESSAGE }) {
+	  if (iframe && iframe.contentWindow) {
+	    iframe.contentWindow.postMessage({ type: "fromTurboWarp", message: MESSAGE }, "*");
+	  }
+	}
+	  
     getValue() {
       return this.receivedValue;
     }
-    
+
     resetValue() {
       this.receivedValue = "";
     }
