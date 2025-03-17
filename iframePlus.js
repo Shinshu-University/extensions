@@ -4,32 +4,6 @@
 // Context: "iframe" is an HTML element that lets websites embed other websites.
 // License: MIT AND MPL-2.0
 
-/* generated l10n code */
-Scratch.translate.setup({
-  "ja": {
-    "_Iframe": "埋め込み",
-    "_It works!": "うまく動作しています!",
-    "_close iframe": "ページを閉じる",
-    "_height": "高さ",
-    "_hide iframe": "ページを隠す",
-    "_iframe [MENU]": "ページの[MENU]",
-    "_interactive": "動きがあるか?",
-    "_resize behavior": "サイズ変更動作",
-    "_scale": "スケール",
-    "_set iframe height to [HEIGHT]": "ページの高さを[HEIGHT]にする",
-    "_set iframe interactive to [INTERACTIVE]": "ページが動いているかを[INTERACTIVE]にする",
-    "_set iframe resize behavior to [RESIZE]": "埋め込みのサイズ変更動作を[RESIZE]にする",
-    "_set iframe width to [WIDTH]": "ページの横幅を[WIDTH]にする",
-    "_set iframe x position to [X]": "ページのx座標を[X]にする",
-    "_set iframe y position to [Y]": "ページのy座標を[Y]にする",
-    "_show HTML [HTML]": "[HTML]のHTMLを表示する",
-    "_show iframe": "ページを表示する",
-    "_show website [URL]": "[URL]のウェブサイトを表示する",
-    "_url": "URL",
-    "_visible": "見えるか?",
-    "_width": "横幅"
-  },
-}); /* end generated l10n code */
 (function(Scratch) {
   "use strict";
 
@@ -255,8 +229,7 @@ Scratch.translate.setup({
           }, {
             opcode: "setInteractive",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate(
-              "set iframe interactive to [INTERACTIVE]"),
+            text: "埋め込みの動作を[INTERACTIVE]にする",
             arguments: {
               INTERACTIVE: {
                 type: Scratch.ArgumentType.STRING,
@@ -266,8 +239,7 @@ Scratch.translate.setup({
           }, {
             opcode: "setResize",
             blockType: Scratch.BlockType.COMMAND,
-            text: Scratch.translate(
-              "set iframe resize behavior to [RESIZE]"),
+            text: "埋め込みのサイズ変更動作を[RESIZE]にする",
             arguments: {
               RESIZE: {
                 type: Scratch.ArgumentType.STRING,
@@ -299,14 +271,14 @@ Scratch.translate.setup({
           getMenu: {
             acceptReporters: true,
             items: [
-              Scratch.translate("url"),
-              Scratch.translate("visible"),
+              "url",
+              "visible",
               "x",
               "y",
-              Scratch.translate("width"),
-              Scratch.translate("height"),
-              Scratch.translate("interactive"),
-              Scratch.translate("resize behavior"),
+              "width",
+              "height",
+              "interactive",
+              "resize behavior",
             ],
           },
           interactiveMenu: {
@@ -320,10 +292,10 @@ Scratch.translate.setup({
           resizeMenu: {
             acceptReporters: true,
             items: [{
-              text: Scratch.translate("scale"),
+              text: "scale",
               value: "scale",
             }, {
-              text: Scratch.translate("viewport"),
+              text: "viewport",
               value: "viewport",
             }, ],
           },
