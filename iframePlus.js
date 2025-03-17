@@ -104,6 +104,7 @@
     iframe.style.height = "100%";
     iframe.style.border = "none";
     iframe.style.position = "absolute";
+    iframe.style.pointerEvents = "auto";
     iframe.setAttribute("sandbox", SANDBOX.join(" "));
     iframe.setAttribute(
       "allow",
